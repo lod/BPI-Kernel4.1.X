@@ -1,7 +1,7 @@
 /*
- * Copyright 2014 Hans de Goede <hdegoede@redhat.com>
+ * Copyright 2014 Maxime Ripard
  *
- * Hans de Goede <hdegoede@redhat.com>
+ * Maxime Ripard <maxime.ripard@free-electrons.com>
  *
  * This file is dual-licensed: you can use it either under the terms
  * of the GPL or the X11 license, at your option. Note that this dual
@@ -48,61 +48,49 @@
  */
 
 /dts-v1/;
-#include "sun7i-a20.dtsi"
-#include "sunxi-bpi-regulators.dtsi"
+#include "sun6i-a31.dtsi"
+#include "sunxi-common-regulators.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/pinctrl/sun4i-a10.h>
 
 / {
-	model = "Banana Pi BPI-M1";
-	compatible = "sinovoip, bananapi", "allwinner,sun7i-a20";
-
-	aliases {
-		serial0 = &uart0;
-		serial1 = &uart3;
-		serial2 = &uart7;
-	};
+	model = "Banana Pi BPI-M2";
+	compatible = "sinovoip, bpi-m2", "allwinner,sun6i-a31";
 
 	chosen {
-		stdout-path = "serial0:115200n8";
+		bootargs = "earlyprintk console=ttyS0,115200";
 	};
 
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
 		pinctrl-0 = <&led_pins_bananapi>;
-
 		green {
 			label = "bananapi:green:usr";
-			gpios = <&pio 7 24 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
+			gpios = <&pio 6 10 GPIO_ACTIVE_HIGH>;
+		};
+		blue {
+			label = "bananapi:blue:usr";
+			gpios = <&pio 6 5 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
-	reg_gmac_3v3: gmac-3v3 {
+	reg_vmmc2: vmmc2 {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
-		pinctrl-0 = <&gmac_power_pin_bananapi>;
-		regulator-name = "gmac-3v3";
+		pinctrl-0 = <&vmmc2_pin_bananapi>;
+		regulator-name = "vmmc2";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		startup-delay-us = <100000>;
+		regulator-always-on;
+		regulator-boot-on;
 		enable-active-high;
-		gpio = <&pio 7 23 GPIO_ACTIVE_HIGH>;
+		gpio = <&pio 10 8 GPIO_ACTIVE_HIGH>; /* MIKEY BUG PL8 */
 	};
 };
 
-&ahci {
-	status = "okay";
-};
-
 &ehci0 {
-	status = "okay";
-};
-
-&ehci1 {
 	status = "okay";
 };
 
@@ -111,7 +99,9 @@
 	pinctrl-0 = <&gmac_pins_rgmii_a>;
 	phy = <&phy1>;
 	phy-mode = "rgmii";
-	phy-supply = <&reg_gmac_3v3>;
+	snps,reset-gpio = <&pio 0 21 GPIO_ACTIVE_HIGH>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 10000 30000>;
 	status = "okay";
 
 	phy1: ethernet-phy@1 {
@@ -122,86 +112,98 @@
 &i2c0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c0_pins_a>;
+	/* pull-ups and devices require AXP221 DLDO3 */
+	status = "failed";
+};
+
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins_a>;
 	status = "okay";
-
-	axp209: pmic@34 {
-		compatible = "x-powers,axp209";
-		reg = <0x34>;
-		interrupt-parent = <&nmi_intc>;
-		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
-
-		interrupt-controller;
-		#interrupt-cells = <1>;
-	};
 };
 
 &i2c2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pins_a>;
 	status = "okay";
-};
 
-&ir0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&ir0_rx_pins_a>;
-	status = "okay";
+	pcf8563: rtc@51 {
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+	};
 };
 
 &mmc0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&mmc0_pins_a>, <&mmc0_cd_pin_bananapi>;
-	vmmc-supply = <&reg_vcc3v3>;
+	pinctrl-0 = <&mmc0_pins_a>, <&mmc0_cd_pin_hummingbird>;
+	vmmc-supply = <&reg_vcc3v0>;
 	bus-width = <4>;
-	cd-gpios = <&pio 7 10 GPIO_ACTIVE_HIGH>; /* PH10 */
+	cd-gpios = <&pio 0 4 GPIO_ACTIVE_HIGH>; /* PA4 */
 	cd-inverted;
 	status = "okay";
+};
+
+&mmc2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc2_pins_a>;
+	vmmc-supply = <&reg_vmmc2>;
+	bus-width = <4>;
+	non-removable;
+	status = "okay";
+
+	brcmf: bcrmf@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+		interrupt-parent = <&pio>;
+		interrupts = <5 10>; /* MIKEY BUG PL5 */
+		interrupt-names = "host-wake";
+	};
+};
+
+&mmc0_pins_a {
+	/* external pull-ups missing for some pins */
+	allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
+};
+
+&mmc2_pins_a {
+	/* external pull-ups missing for some pins */
+	allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
 };
 
 &ohci0 {
 	status = "okay";
 };
 
-&ohci1 {
-	status = "okay";
-};
-
 &pio {
-	mmc0_cd_pin_bananapi: mmc0_cd_pin@0 {
-		allwinner,pins = "PH10";
+	led_pins_bananapi: led_pins@0 {
+		allwinner,pins = "PG10", "PG5";
+		allwinner,function = "gpio_out";
+		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+	};
+
+	mmc0_cd_pin_hummingbird: mmc0_cd_pin@0 {
+		allwinner,pins = "PA4";
 		allwinner,function = "gpio_in";
 		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 		allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
 	};
 
-	gmac_power_pin_bananapi: gmac_power_pin@0 {
-		allwinner,pins = "PH23";
+	mmc2_pins_a: mmc2@0 {
+		allwinner,pins = "PC06","PC07","PC08","PC09","PC10","PC11","PC12","PC13","PC14","PC15";
+		allwinner,function = "mmc2";
+		allwinner,drive = <SUN4I_PINCTRL_30_MA>;
+		allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
+	};
+
+	vmmc2_pin_bananapi: vmmc2_pin@0 {
+		allwinner,pins = "PL8";
 		allwinner,function = "gpio_out";
 		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 	};
-
-	led_pins_bananapi: led_pins@0 {
-		allwinner,pins = "PH24";
-		allwinner,function = "gpio_out";
-		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
-		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
-	};
-};
-
-&reg_usb1_vbus {
-	status = "okay";
-};
-
-&reg_usb2_vbus {
-	status = "okay";
-};
-
-&spi0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&spi0_pins_a>,
-		    <&spi0_cs0_pins_a>,
-		    <&spi0_cs1_pins_a>;
-	status = "okay";
 };
 
 &uart0 {
@@ -210,20 +212,6 @@
 	status = "okay";
 };
 
-&uart3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart3_pins_b>;
-	status = "okay";
-};
-
-&uart7 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart7_pins_a>;
-	status = "okay";
-};
-
 &usbphy {
-	usb1_vbus-supply = <&reg_usb1_vbus>;
-	usb2_vbus-supply = <&reg_usb2_vbus>;
 	status = "okay";
 };
