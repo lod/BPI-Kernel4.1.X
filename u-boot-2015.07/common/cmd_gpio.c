@@ -12,9 +12,11 @@
 #include <dm.h>
 #include <asm/gpio.h>
 
+#define	D	printf("bpi:__%d__(%s:%s)\n",__LINE__,__FILE__,__FUNCTION__);
+
 __weak int name_to_gpio(const char *name)
 {
-	return simple_strtoul(name, NULL, 10);
+D	return simple_strtoul(name, NULL, 10);
 }
 
 enum gpio_cmd {
@@ -23,6 +25,20 @@ enum gpio_cmd {
 	GPIO_CLEAR,
 	GPIO_TOGGLE,
 };
+
+/* we use this so that we can do without the ctype library */
+#define is_digit(c)     ((c) >= '0' && (c) <= '9')
+
+static int bpi_atoi(const char *s)
+{
+        int i = 0;
+	int p=0;
+        while (is_digit(s[p])) {
+                i = i * 10 + s[p] - '0';
+		p++;
+	}
+        return i;
+}
 
 #if defined(CONFIG_DM_GPIO) && !defined(gpio_status)
 
@@ -178,7 +194,15 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return cmd_process_error(cmdtp, ret);
 #else
 	/* turn the gpio name into a gpio number */
-	gpio = name_to_gpio(str_gpio);
+D	gpio = name_to_gpio(str_gpio);
+#ifdef BPI
+#else
+	printf("BPI: str_gpio(%s) gpio(%d)\n",str_gpio,gpio);
+	if (gpio < 0) {
+		gpio = bpi_atoi(str_gpio);
+		printf("BPI: str_gpio(%s) gpio(%d)\n",str_gpio,gpio);
+	}
+#endif
 	if (gpio < 0)
 		goto show_usage;
 #endif

@@ -27,6 +27,46 @@ struct sunxi_mmc_host {
 	struct mmc_config cfg;
 };
 
+
+#define	BPI	1
+#ifdef BPI
+#else
+static int bpi_gpio_mmc()
+{
+	unsigned int gpio_g40[] ={ 197, 202, 203, 243, 242, 132, 233, 133, 234, 199, 198, 235, 201, 236, 207, 200, 208, 205, 206, 204 };
+	unsigned int gpio_csi[] ={ 384, 239, 238, 247, 128, 210, 129, 246, 131, 130, 249, 385, 136, 137, 138, 139, 140, 141, 142, 143, 248 };
+	unsigned int gpio_dsi[] ={ 240, 196, 96, 97, 98, 99, 100, 101, 102, 103, 119, 118, 117, 116, 115, 114, 113, 112, 241, 192, 193, 237, 195, 121, 123, 122, 194, 120, 104, 105, 106, 107, 108, 109, 110, 111 };
+	ulong values[] = {1, 0, 1, 0 };
+	int i;
+	int j;
+	unsigned int gpio;
+	ulong value=1;
+	printf("MIKEY: __%s__ time(%d)\n",__FUNCTION__,sizeof(values)/4);
+	for(j=0 ; j<sizeof(values)/4; j++) {
+		value=values[j];
+		i=0;
+		while(1) {
+			if(i<sizeof(gpio_g40)/4) {
+				gpio = gpio_g40[i];
+				gpio_direction_output(gpio, value);
+			}
+			if(i<sizeof(gpio_csi)/4) {
+				gpio = gpio_csi[i];
+				gpio_direction_output(gpio, value);
+			}
+			if(i<sizeof(gpio_dsi)/4) {
+				gpio = gpio_dsi[i];
+				gpio_direction_output(gpio, value);
+			}
+			udelay(20 * 1000);
+			i++;
+			if(i>=sizeof(gpio_dsi)/4)
+				break;
+		}
+	}
+}
+#endif
+
 /* support 4 mmc hosts */
 struct sunxi_mmc_host mmc_host[4];
 
@@ -456,6 +496,11 @@ struct mmc *sunxi_mmc_init(int sdc_no)
 
 	cfg->f_min = 400000;
 	cfg->f_max = 52000000;
+
+#ifdef BPI
+#else
+	bpi_gpio_mmc();
+#endif
 
 	if (mmc_resource_init(sdc_no) != 0)
 		return NULL;

@@ -1,7 +1,5 @@
 /*
- * Copyright 2014 Hans de Goede <hdegoede@redhat.com>
- *
- * Hans de Goede <hdegoede@redhat.com>
+ * Copyright 2015 Hans de Goede <hdegoede@redhat.com>
  *
  * This file is dual-licensed: you can use it either under the terms
  * of the GPL or the X11 license, at your option. Note that this dual
@@ -17,6 +15,11 @@
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public
+ *     License along with this file; if not, write to the Free
+ *     Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
+ *     MA 02110-1301 USA
  *
  * Or, alternatively,
  *
@@ -44,19 +47,17 @@
 
 /dts-v1/;
 #include "sun7i-a20.dtsi"
-#include "sunxi-bpi-regulators.dtsi"
-
+#include "sunxi-common-regulators.dtsi"
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/interrupt-controller/irq.h>
-#include <dt-bindings/pinctrl/sun4i-a10.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
-	model = "Banana Pi BPI-M1";
-	compatible = "sinovoip, bananapi", "allwinner,sun7i-a20";
+	model = "Banana Pi BPI-M1Plus";
+	compatible = "sinovoip, bpi-m1plus", "allwinner,sun7i-a20";
 
 	aliases {
 		serial0 = &uart0;
-		serial1 = &uart3;
+		serial1 = &uart4;
 		serial2 = &uart7;
 	};
 
@@ -69,10 +70,17 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&led_pins_bananapi>;
 
+		red {
+			label = "bananapi:red:usr";
+			gpios = <&pio 7 25 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+		};
+
 		green {
 			label = "bananapi:green:usr";
 			gpios = <&pio 7 24 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
+
 		};
 	};
 
@@ -86,6 +94,19 @@
 		startup-delay-us = <100000>;
 		enable-active-high;
 		gpio = <&pio 7 23 GPIO_ACTIVE_HIGH>;
+	};
+
+	reg_vmmc3: vmmc3 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&vmmc3_pin_bananapi>;
+		regulator-name = "vmmc3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+		enable-active-high;
+		gpio = <&pio 7 22 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -152,6 +173,25 @@
 	status = "okay";
 };
 
+&mmc3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc3_pins_a>;
+	vmmc-supply = <&reg_vmmc3>;
+	bus-width = <4>;
+	non-removable;
+	status = "okay";
+
+	brcmf: bcrmf@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+		interrupt-parent = <&pio>;
+		interrupts = <15 8>; /* PH15 / EINT15 */
+		interrupt-names = "host-wake";
+	};
+};
+
 &ohci0 {
 	status = "okay";
 };
@@ -161,13 +201,6 @@
 };
 
 &pio {
-	mmc0_cd_pin_bananapi: mmc0_cd_pin@0 {
-		allwinner,pins = "PH10";
-		allwinner,function = "gpio_in";
-		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
-		allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
-	};
-
 	gmac_power_pin_bananapi: gmac_power_pin@0 {
 		allwinner,pins = "PH23";
 		allwinner,function = "gpio_out";
@@ -176,7 +209,35 @@
 	};
 
 	led_pins_bananapi: led_pins@0 {
-		allwinner,pins = "PH24";
+		allwinner,pins = "PH24", "PG2";
+		allwinner,function = "gpio_out";
+		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+	};
+
+	mmc0_cd_pin_bananapi: mmc0_cd_pin@0 {
+		allwinner,pins = "PH10";
+		allwinner,function = "gpio_in";
+		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+		allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
+	};
+
+	usb1_vbus_pin_bananapi: usb1_vbus_pin@0 {
+		allwinner,pins = "PH0";
+		allwinner,function = "gpio_out";
+		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+	};
+
+	usb2_vbus_pin_bananapi: usb2_vbus_pin@0 {
+		allwinner,pins = "PH1";
+		allwinner,function = "gpio_out";
+		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+	};
+
+	vmmc3_pin_bananapi: vmmc3_pin@0 {
+		allwinner,pins = "PH22";
 		allwinner,function = "gpio_out";
 		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
@@ -184,10 +245,14 @@
 };
 
 &reg_usb1_vbus {
+	pinctrl-0 = <&usb1_vbus_pin_bananapi>;
+	gpio = <&pio 7 0 GPIO_ACTIVE_HIGH>; /* PH0 */
 	status = "okay";
 };
 
 &reg_usb2_vbus {
+	pinctrl-0 = <&usb2_vbus_pin_bananapi>;
+	gpio = <&pio 7 1 GPIO_ACTIVE_HIGH>; /* PH1 */
 	status = "okay";
 };
 
@@ -205,9 +270,9 @@
 	status = "okay";
 };
 
-&uart3 {
+&uart4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&uart3_pins_b>;
+	pinctrl-0 = <&uart4_pins_b>;
 	status = "okay";
 };
 

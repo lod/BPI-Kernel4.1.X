@@ -50,7 +50,12 @@
  */
 #define CONFIG_DISPLAY_CPUINFO
 
+#ifdef  BPI
 #define CONFIG_SYS_PROMPT	"sunxi# "
+#else
+#define CONFIG_SYS_PROMPT	"IoT# "
+#define CONFIG_SUPPORT_RAW_INITRD
+#endif
 
 /* Serial & console */
 #define CONFIG_SYS_NS16550
@@ -288,6 +293,10 @@ extern int soft_i2c_gpio_scl;
 #define CONFIG_CFB_CONSOLE
 #define CONFIG_VIDEO_SW_CURSOR
 #define CONFIG_VIDEO_LOGO
+#ifdef  BPI
+#else
+#define CONFIG_VIDEO_BMP_LOGO
+#endif
 #define CONFIG_VIDEO_STD_TIMINGS
 #define CONFIG_I2C_EDID
 

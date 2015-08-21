@@ -18,6 +18,11 @@
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
  *
+ *     You should have received a copy of the GNU General Public
+ *     License along with this file; if not, write to the Free
+ *     Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
+ *     MA 02110-1301 USA
+ *
  * Or, alternatively,
  *
  *  b) Permission is hereby granted, free of charge, to any person
@@ -51,8 +56,8 @@
 #include <dt-bindings/pinctrl/sun4i-a10.h>
 
 / {
-	model = "Banana Pi BPI-M1";
-	compatible = "sinovoip, bananapi", "allwinner,sun7i-a20";
+	model = "Banana Pi BPI-R1";
+	compatible = "sinovoip, bpi-r1", "allwinner,sun7i-a20";
 
 	aliases {
 		serial0 = &uart0;
@@ -71,7 +76,7 @@
 
 		green {
 			label = "bananapi:green:usr";
-			gpios = <&pio 7 24 GPIO_ACTIVE_HIGH>;
+			gpios = <&pio 7 2 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 		};
 	};
@@ -176,7 +181,7 @@
 	};
 
 	led_pins_bananapi: led_pins@0 {
-		allwinner,pins = "PH24";
+		allwinner,pins = "PH2";
 		allwinner,function = "gpio_out";
 		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
