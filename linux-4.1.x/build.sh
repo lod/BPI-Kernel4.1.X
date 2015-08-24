@@ -1,7 +1,7 @@
 #!/bin/bash
 export ARCH=arm
 export CROSS_COMPILE=arm-linux-gnueabihf-
-export KBUILD_OUTPUT=output/bpi-docker
+export KBUILD_OUTPUT=output/bpi
 mkdir -p $KBUILD_OUTPUT
 make bpi_defconfig
 make -j8 dtbs
