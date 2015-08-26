@@ -44,7 +44,7 @@
 
 /dts-v1/;
 #include "sun7i-a20.dtsi"
-#include "sunxi-bpi-regulators.dtsi"
+#include "sunxi-common-regulators.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/irq.h>
