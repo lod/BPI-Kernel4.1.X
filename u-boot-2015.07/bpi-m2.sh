@@ -1,3 +1,4 @@
+#!/bin/bash
 export ARCH=arm
 KBUILD_OUTPUT=out/bpi-m2
 export KBUILD_OUTPUT
